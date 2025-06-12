@@ -59,11 +59,18 @@ function trackUser(eventData) {
     }
   }
 
-  return sendRequest({
-    path: '/users/track',
-    body: mappedTrackUserData,
-    method: 'POST'
-  });
+  function trackUser(eventData) {
+    const mappedTrackUserData = mapEventData(eventData);
+    const appIdString = makeString(data.appId);
+
+    mappedTrackUserData.app_id = appIdString;
+
+    return sendRequest({
+      path: '/users/track',
+      body: mappedTrackUserData,
+      method: 'POST'
+    });
+  }
 }
 
 function mapEventData(eventData) {

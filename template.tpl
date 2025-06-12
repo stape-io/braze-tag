@@ -100,6 +100,19 @@ ___TEMPLATE_PARAMETERS___
     "help": "You must use an API Key with the \"\u003ci\u003eusers.track\u003c/i\u003e\" permission. \u003ca href\u003d\"https://www.braze.com/docs/api/basics/#creating-rest-api-keys\"\u003eLearn more\u003c/a\u003e."
   },
   {
+    "type": "TEXT",
+    "name": "appId",
+    "displayName": "Braze App ID",
+    "simpleValueType": true,
+    "alwaysInSummary": true,
+    "valueValidators": [
+      { 
+        "type": "NON_EMPTY"
+      }
+    ],
+      "help": "The Braze App Identifier (you can find this in your Braze dashboard under App Settings)."
+  },
+  {
     "type": "CHECKBOX",
     "name": "useOptimisticScenario",
     "checkboxText": "Use Optimistic Scenario",
