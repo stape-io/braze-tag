@@ -85,6 +85,11 @@ function addEventData(eventData, mappedData) {
     properties: {}
   };
 
+  if (isValidValue(data.appId)) {
+    event.app_id = makeString(data.appId);
+  }
+
+
   if ([true, 'true'].indexOf(data.includeCommonEventData) !== -1) {
     [
       'page_location',
