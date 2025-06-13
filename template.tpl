@@ -104,13 +104,7 @@ ___TEMPLATE_PARAMETERS___
     "name": "appId",
     "displayName": "Braze App ID",
     "simpleValueType": true,
-    "alwaysInSummary": true,
-    "valueValidators": [
-      { 
-        "type": "NON_EMPTY"
-      }
-    ],
-      "help": "The Braze App Identifier (you can find this in your Braze dashboard under App Settings)."
+      "help": "Optionally specify your Braze App Identifier so events go to the right app."
   },
   {
     "type": "CHECKBOX",

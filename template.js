@@ -59,18 +59,11 @@ function trackUser(eventData) {
     }
   }
 
-  function trackUser(eventData) {
-    const mappedTrackUserData = mapEventData(eventData);
-    const appIdString = makeString(data.appId);
-
-    mappedTrackUserData.app_id = appIdString;
-
-    return sendRequest({
-      path: '/users/track',
-      body: mappedTrackUserData,
-      method: 'POST'
-    });
-  }
+  return sendRequest({
+    path: '/users/track',
+    body: mappedTrackUserData,
+    method: 'POST'
+  });
 }
 
 function mapEventData(eventData) {
@@ -91,6 +84,11 @@ function addEventData(eventData, mappedData) {
     time: data.eventTimestamp || convertTimestampToISO(getTimestampMillis()),
     properties: {}
   };
+
+  if (isValidValue(data.appId)) {
+    event.app_id = makeString(data.appId);
+  }
+
 
   if ([true, 'true'].indexOf(data.includeCommonEventData) !== -1) {
     [
