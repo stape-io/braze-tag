@@ -1,4 +1,6 @@
 homepage: 'https://stape.io/'
 versions:
+  - sha: 72b295b035b8bfb992f0e72716071ef5d9057ea8
+    changeNotes: Add Braze App ID support. Improve tests.
   - sha: 9934bdc0bd6bb42fcca5e6a8a9c13fc0ab38b5a9
     changeNotes: Initial release.
