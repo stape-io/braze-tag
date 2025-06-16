@@ -7,7 +7,7 @@ The **Braze Tag for Google Tag Manager Server-Side** allows you to send events, 
 1. Add the **Braze tag** to your server Google Tag Manager container.
 2. Set the **Braze REST API Endpoint** (e.g. `https://rest.iad-01.braze.com`).
 3. Add your **Braze API Key** (must include the `users.track` permission).
-4. Add your **Braze App ID** (you find in your App Settings)
+4. Add your **Braze App ID** (you can find it under your App Settings or APIs and Identifiers configuration)
 5. Choose the **Event Type** you want to send (`purchase` or custom).
 6. Set user identifiers (**at least one user identifier is required**) and optional user alias.
 7. Add custom event properties and user profile attributes.

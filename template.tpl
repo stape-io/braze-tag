@@ -104,7 +104,7 @@ ___TEMPLATE_PARAMETERS___
     "name": "appId",
     "displayName": "Braze App ID",
     "simpleValueType": true,
-      "help": "Optionally specify your Braze App Identifier so events go to the right app."
+    "help": "Optional.\n\u003cbr\u003e\nEnter your Braze App Identifier to ensure events are sent to the correct app instance. \u003ca href\u003d\"https://www.braze.com/docs/api/identifier_types/#app-identifier\"\u003eLearn more\u003c/a\u003e."
   },
   {
     "type": "CHECKBOX",
@@ -642,6 +642,10 @@ function addEventData(eventData, mappedData) {
     properties: {}
   };
 
+  if (isValidValue(data.appId)) {
+    event.app_id = makeString(data.appId);
+  }
+
   if ([true, 'true'].indexOf(data.includeCommonEventData) !== -1) {
     [
       'page_location',
@@ -932,7 +936,6 @@ function log(rawDataToLog) {
   if (determinateIsLoggingEnabledForBigQuery())
     logDestinationsHandlers.bigQuery = logToBigQuery;
 
-  // Key mappings for each log destination
   const keyMappings = {
     // No transformation for Console is needed.
     bigQuery: {
@@ -955,10 +958,10 @@ function log(rawDataToLog) {
 
     const mapping = keyMappings[logDestination];
     const dataToLog = mapping ? {} : rawDataToLog;
-    // Map keys based on the log destination
+
     if (mapping) {
       for (const key in rawDataToLog) {
-        const mappedKey = mapping[key] || key; // Fallback to original key if no mapping exists
+        const mappedKey = mapping[key] || key;
         dataToLog[mappedKey] = rawDataToLog[key];
       }
     }
@@ -978,18 +981,12 @@ function logToBigQuery(dataToLog) {
     tableId: data.logBigQueryTableId
   };
 
-  // timestamp is required.
   dataToLog.timestamp = getTimestampMillis();
 
-  // Columns with type JSON need to be stringified.
   ['request_body', 'response_headers', 'response_body'].forEach((p) => {
-    // GTM Sandboxed JSON.parse returns undefined for malformed JSON but throws post-execution, causing execution failure.
-    // If fixed, could use: dataToLog[p] = JSON.stringify(JSON.parse(dataToLog[p]) || dataToLog[p]);
     dataToLog[p] = JSON.stringify(dataToLog[p]);
   });
 
-  // assertApi doesn't work for 'BigQuery.insert()'. It's needed to convert BigQuery into a function when testing.
-  // Ref: https://gtm-gear.com/posts/gtm-templates-testing/
   const bigquery =
     getType(BigQuery) === 'function'
       ? BigQuery() /* Only during Unit Tests */
@@ -1280,30 +1277,40 @@ scenarios:
     \ expectedValue,\n    external_id: expectedValue,\n    braze_id: expectedValue,\n\
     \    user_alias: {\n      alias_label: expectedValue,\n      alias_name: expectedValue\n\
     \    },\n    '_update_existing_only': mockData.updateExistingUsersOnly,\n    \n\
-    \    foo: expectedValue,\n    bar: expectedValue\n  }],\n  events: [{\n    email:\
-    \ expectedValue,\n    phone: expectedValue,\n    external_id: expectedValue,\n\
-    \    braze_id: expectedValue,\n    user_alias: {\n      alias_label: expectedValue,\n\
-    \      alias_name: expectedValue\n    },\n    '_update_existing_only': mockData.updateExistingUsersOnly,\n\
-    \    \n    time: expectedTimestamp,\n    \n    properties: {\n      page_location:\
-    \ expectedValue,\n      page_title: expectedValue,\n      page_referrer: expectedValue,\n\
-    \      page_hostname: expectedValue,\n      page_encoding: expectedValue,\n  \
-    \    screen_resolution: expectedValue,\n      user_agent: expectedValue,\n   \
-    \   language: expectedValue,\n      \n      foo: expectedValue,\n      bar: expectedValue\n\
-    \    }\n  }]\n};\n\nmock('sendHttpRequest', (requestUrl, callback, requestOptions,\
-    \ requestBody) => {\n  assertThat(requestUrl).isEqualTo(expectedValue + '/users/track');\n\
+    \    foo: expectedValue,\n    bar: expectedValue\n  }],\n  events: [{\n    app_id:\
+    \ expectedValue,\n    \n    email: expectedValue,\n    phone: expectedValue,\n\
+    \    external_id: expectedValue,\n    braze_id: expectedValue,\n    user_alias:\
+    \ {\n      alias_label: expectedValue,\n      alias_name: expectedValue\n    },\n\
+    \    '_update_existing_only': mockData.updateExistingUsersOnly,\n    \n    time:\
+    \ expectedTimestamp,\n    \n    properties: {\n      page_location: expectedValue,\n\
+    \      page_title: expectedValue,\n      page_referrer: expectedValue,\n     \
+    \ page_hostname: expectedValue,\n      page_encoding: expectedValue,\n      screen_resolution:\
+    \ expectedValue,\n      user_agent: expectedValue,\n      language: expectedValue,\n\
+    \      \n      foo: expectedValue,\n      bar: expectedValue\n    }\n  }]\n};\n\
+    \nmock('sendHttpRequest', (requestUrl, callback, requestOptions, requestBody)\
+    \ => {\n  assertThat(requestUrl).isEqualTo(expectedValue + '/users/track');\n\
     \  assertThat(requestOptions).isEqualTo({\n    headers: {\n      Authorization:\
     \ 'Bearer ' + expectedValue,\n      'Content-Type': 'application/json'\n    },\n\
     \    method: 'POST'\n  });\n  assertThat(JSON.parse(requestBody)).isEqualTo(expectedRequestBody);\n\
     \  \n  callback(200);\n});\n\nrunCode(mockData);\n\nassertApi('gtmOnSuccess').wasCalled();\n\
     assertApi('gtmOnFailure').wasNotCalled();"
 - name: Custom Event request is sent, but has errors - gtmOnFailure
-  code: |
+  code: |-
     mockData.eventType = 'custom';
     mockData.eventName = expectedValue;
     mockData.userIdentifiersList = userIdentifiersList;
 
     mock('sendHttpRequest', (requestUrl, callback, requestOptions, requestBody) => {
-      callback(400); // Remember to check error case.
+      callback(400);
+    });
+
+    runCode(mockData);
+
+    assertApi('gtmOnSuccess').wasNotCalled();
+    assertApi('gtmOnFailure').wasCalled();
+
+    mock('sendHttpRequest', (requestUrl, callback, requestOptions, requestBody) => {
+      callback(200, {}, JSON.stringify({ errors: true }));
     });
 
     runCode(mockData);
@@ -1323,30 +1330,49 @@ scenarios:
     \    braze_id: expectedValue,\n    user_alias: {\n      alias_label: expectedValue,\n\
     \      alias_name: expectedValue\n    },\n    '_update_existing_only': mockData.updateExistingUsersOnly,\n\
     \    foo: expectedValue,\n    bar: expectedValue\n  }],\n  purchases: [{\n   \
-    \ email: expectedValue,\n    phone: expectedValue,\n    external_id: expectedValue,\n\
-    \    braze_id: expectedValue,\n    user_alias: {\n      alias_label: expectedValue,\n\
-    \      alias_name: expectedValue\n    },\n    '_update_existing_only': mockData.updateExistingUsersOnly,\n\
-    \    \n    time: expectedTimestamp,\n    product_id: expectedValue,\n    currency:\
-    \ expectedValue,\n    price: expectedPrice,\n    \n    properties: {\n      transaction_id:\
-    \ expectedValue,\n      products: expectedProducts,\n      \n      page_location:\
-    \ expectedValue,\n      page_title: expectedValue,\n      page_referrer: expectedValue,\n\
-    \      page_hostname: expectedValue,\n      page_encoding: expectedValue,\n  \
-    \    screen_resolution: expectedValue,\n      user_agent: expectedValue,\n   \
-    \   language: expectedValue,\n      \n      foo: expectedValue,\n      bar: expectedValue\n\
-    \    }\n  }]\n};\n\nmock('sendHttpRequest', (requestUrl, callback, requestOptions,\
-    \ requestBody) => {\n  assertThat(requestUrl).isEqualTo(expectedValue + '/users/track');\n\
+    \ app_id: expectedValue,\n\n    email: expectedValue,\n    phone: expectedValue,\n\
+    \    external_id: expectedValue,\n    braze_id: expectedValue,\n    user_alias:\
+    \ {\n      alias_label: expectedValue,\n      alias_name: expectedValue\n    },\n\
+    \    '_update_existing_only': mockData.updateExistingUsersOnly,\n    \n    time:\
+    \ expectedTimestamp,\n    product_id: expectedValue,\n    currency: expectedValue,\n\
+    \    price: expectedPrice,\n    \n    properties: {\n      transaction_id: expectedValue,\n\
+    \      products: expectedProducts,\n      \n      page_location: expectedValue,\n\
+    \      page_title: expectedValue,\n      page_referrer: expectedValue,\n     \
+    \ page_hostname: expectedValue,\n      page_encoding: expectedValue,\n      screen_resolution:\
+    \ expectedValue,\n      user_agent: expectedValue,\n      language: expectedValue,\n\
+    \      \n      foo: expectedValue,\n      bar: expectedValue\n    }\n  }]\n};\n\
+    \nmock('sendHttpRequest', (requestUrl, callback, requestOptions, requestBody)\
+    \ => {\n  assertThat(requestUrl).isEqualTo(expectedValue + '/users/track');\n\
     \  assertThat(requestOptions).isEqualTo({\n    headers: {\n      Authorization:\
     \ 'Bearer ' + expectedValue,\n      'Content-Type': 'application/json'\n    },\n\
     \    method: 'POST'\n  });\n  assertThat(JSON.parse(requestBody)).isEqualTo(expectedRequestBody);\n\
     \  \n  callback(200);\n});\n\nrunCode(mockData);\n\nassertApi('gtmOnSuccess').wasCalled();\n\
     assertApi('gtmOnFailure').wasNotCalled();"
 - name: Purchase Event request is sent, but has errors - gtmOnFailure
-  code: |
+  code: |-
     mockData.eventType = 'purchase';
     mockData.userIdentifiersList = userIdentifiersList;
 
     mock('sendHttpRequest', (requestUrl, callback, requestOptions, requestBody) => {
-      callback(400); // Remember to check error case.
+      callback(400);
+    });
+
+    runCode(mockData);
+
+    assertApi('gtmOnSuccess').wasNotCalled();
+    assertApi('gtmOnFailure').wasCalled();
+
+    mock('sendHttpRequest', (requestUrl, callback, requestOptions, requestBody) => {
+      callback(400);
+    });
+
+    runCode(mockData);
+
+    assertApi('gtmOnSuccess').wasNotCalled();
+    assertApi('gtmOnFailure').wasCalled();
+
+    mock('sendHttpRequest', (requestUrl, callback, requestOptions, requestBody) => {
+      callback(200, {}, JSON.stringify({ errors: true }));
     });
 
     runCode(mockData);
@@ -1487,11 +1513,16 @@ setup: |-
   mock('getTimestampMillis', 1744912049020);
   const expectedTimestamp = '2025-04-17T17:47:29.020Z';
 
+  mock('sendHttpRequest', (requestUrl, callback, requestOptions, requestBody) => {
+    callback(200);
+  });
+
   const mockData = {
     eventType: 'custom',
     eventName: expectedValue,
     apiEndpoint: expectedValue,
     apiKey: expectedValue,
+    appId: expectedValue,
     logBigQueryProjectId: expectedValue,
     logBigQueryDatasetId: expectedValue,
     logBigQueryTableId: expectedValue
